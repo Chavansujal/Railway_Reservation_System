@@ -1,4 +1,5 @@
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.*;
 
@@ -6,6 +7,7 @@ public class ViewBookings extends JFrame {
 
     int userId;
     JTable table;
+    DefaultTableModel model;
 
     public ViewBookings(int userId) {
 
@@ -15,42 +17,52 @@ public class ViewBookings extends JFrame {
         setSize(600, 400);
         setLocationRelativeTo(null);
 
+        String[] columns = {"Booking ID", "Source", "Destination", "Date", "Seats"};
+        model = new DefaultTableModel(columns, 0);
+        table = new JTable(model);
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        add(scrollPane);
+
         try {
             Connection con = DBConnection.getConnection();
 
-            String query = "SELECT booking_id, source, destination, journey_date, seats FROM bookings WHERE user_id=?";
+            if (con == null) {
+                JOptionPane.showMessageDialog(this, "Database not connected!");
+                return;
+            }
+
+            String query = "SELECT id, source, destination, journey_date, seats FROM bookings WHERE user_id=?";
             PreparedStatement pst = con.prepareStatement(query);
             pst.setInt(1, userId);
 
             ResultSet rs = pst.executeQuery();
 
-            String[] columns = {"Booking ID", "Source", "Destination", "Date", "Seats"};
+            boolean hasData = false;
 
-            // Count rows
-            rs.last();
-            int rowCount = rs.getRow();
-            rs.beforeFirst();
-
-            String[][] data = new String[rowCount][5];
-
-            int i = 0;
             while (rs.next()) {
-                data[i][0] = rs.getString("booking_id");
-                data[i][1] = rs.getString("source");
-                data[i][2] = rs.getString("destination");
-                data[i][3] = rs.getString("journey_date");
-                data[i][4] = rs.getString("seats");
-                i++;
+                hasData = true;
+
+                model.addRow(new Object[]{
+                        rs.getInt("id"),
+                        rs.getString("source"),
+                        rs.getString("destination"),
+                        rs.getDate("journey_date"),
+                        rs.getInt("seats")
+                });
             }
 
-            table = new JTable(data, columns);
-            JScrollPane scrollPane = new JScrollPane(table);
-            add(scrollPane);
+            if (!hasData) {
+                JOptionPane.showMessageDialog(this, "No bookings found!");
+            }
 
+            rs.close();
+            pst.close();
             con.close();
 
         } catch (Exception e) {
             e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error loading bookings!");
         }
 
         setVisible(true);

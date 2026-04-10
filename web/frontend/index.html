@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Railway Reservation System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="noise"></div>
+  <div class="beam beam-one"></div>
+  <div class="beam beam-two"></div>
+
+  <main class="shell">
+    <section class="hero">
+      <p class="badge">Smart Passenger Platform</p>
+      <h1>Railway Reservation System</h1>
+      <p class="hero-copy">A systematic reservation experience with secure access, professional dashboard controls, and complete booking visibility.</p>
+      <div class="hero-points">
+        <article>
+          <h3>Step 1: Secure Access</h3>
+          <p>Register once, then login safely to continue your journey.</p>
+        </article>
+        <article>
+          <h3>Step 2: Dashboard Control</h3>
+          <p>Use dedicated sections for overview, booking, history, and platform details.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="console">
+      <div class="tabs" id="authTabs">
+        <button id="loginTab" class="active" type="button">Login</button>
+        <button id="registerTab" type="button">Register</button>
+      </div>
+
+      <form id="loginForm" class="card show" autocomplete="on">
+        <h2>Sign in to continue</h2>
+        <label>Email address
+          <input type="email" name="email" placeholder="you@example.com" required />
+        </label>
+        <label>Password
+          <input type="password" name="password" placeholder="Enter password" required />
+        </label>
+        <button type="submit">Login</button>
+      </form>
+
+      <form id="registerForm" class="card" autocomplete="on">
+        <h2>Create your account</h2>
+        <label>Full name
+          <input type="text" name="name" placeholder="Your full name" required />
+        </label>
+        <label>Email address
+          <input type="email" name="email" placeholder="you@example.com" required />
+        </label>
+        <label>Password
+          <input type="password" name="password" placeholder="Minimum 4 characters" required minlength="4" />
+        </label>
+        <button type="submit">Register</button>
+      </form>
+
+      <section id="dashboard" class="card dashboard">
+        <header class="dash-top">
+          <div>
+            <h2 id="welcomeText">Welcome</h2>
+            <p class="sub">Manage your railway experience from one professional dashboard.</p>
+          </div>
+          <button id="logoutBtn" class="ghost" type="button">Logout</button>
+        </header>
+
+        <nav class="dash-nav" id="dashNav">
+          <button class="dash-tab active" type="button" data-section="overviewSection">Overview</button>
+          <button class="dash-tab" type="button" data-section="bookSection">Book Ticket</button>
+          <button class="dash-tab" type="button" data-section="historySection">Booking History</button>
+          <button class="dash-tab" type="button" data-section="aboutSection">About Us</button>
+        </nav>
+
+        <section id="overviewSection" class="dash-section show">
+          <div class="stats-grid">
+            <article>
+              <h3 id="totalBookings">0</h3>
+              <p>Total Bookings</p>
+            </article>
+            <article>
+              <h3 id="nextJourney">-</h3>
+              <p>Next Journey Date</p>
+            </article>
+          </div>
+          <div class="overview-note">
+            <h4>Quick Actions</h4>
+            <p>Use <strong>Book Ticket</strong> for new reservations and <strong>Booking History</strong> to review all records.</p>
+          </div>
+        </section>
+
+        <section id="bookSection" class="dash-section">
+          <form id="bookingForm" class="booking-grid">
+            <label>Source
+              <input type="text" name="source" required />
+            </label>
+            <label>Destination
+              <input type="text" name="destination" required />
+            </label>
+            <label>Journey date
+              <input type="date" name="journeyDate" required />
+            </label>
+            <label>Seats
+              <input type="number" name="seats" min="1" required />
+            </label>
+            <button type="submit">Confirm Booking</button>
+          </form>
+        </section>
+
+        <section id="historySection" class="dash-section">
+          <div class="list-head">
+            <h3>Booking History</h3>
+            <button id="refreshBtn" class="ghost" type="button">Refresh</button>
+          </div>
+          <div class="table-box">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Source</th>
+                  <th>Destination</th>
+                  <th>Date</th>
+                  <th>Seats</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="bookingBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="aboutSection" class="dash-section about">
+          <h3>About Us</h3>
+          <p>Railway Reservation System is built to make passenger booking faster, safer, and easier to track. Our goal is to offer a modern digital interface that simplifies trip planning with transparent booking records and dependable access.</p>
+          <p>This portal supports registration, login, ticket booking, and booking history while keeping data organized in a MySQL-backed Java system.</p>
+        </section>
+      </section>
+
+      <p id="message" class="message" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
+

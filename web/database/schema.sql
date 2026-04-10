@@ -1,0 +1,20 @@
+CREATE DATABASE IF NOT EXISTS railway;
+USE railway;
+
+CREATE TABLE IF NOT EXISTS users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(120) NOT NULL UNIQUE,
+    password_hash VARCHAR(64) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS bookings (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    source VARCHAR(80) NOT NULL,
+    destination VARCHAR(80) NOT NULL,
+    journey_date DATE NOT NULL,
+    seats INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_bookings_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

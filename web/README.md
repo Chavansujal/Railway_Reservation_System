@@ -49,11 +49,15 @@ $env:RAILWAY_DB_PASSWORD="your_password"
 
 ## Features implemented
 
-- Register user
-- Login user
-- Book ticket (source, destination, date, seats)
-- View all bookings for logged-in user
-- Logout
+- Premium responsive railway reservation frontend
+- Landing page with animated train hero, route search, offers, testimonials, FAQ, and footer
+- Redesigned login and sign-up modal with password visibility toggle and remember-me UI
+- User dashboard with quick actions, stats, recent bookings, notifications, rewards, and profile hooks
+- Train search results with sorting, skeleton loading, route cards, fare/seat prediction UI, and station autocomplete
+- Seat booking page with coach seat map, passenger details, coupon UI, payment/fare summary, and success animation
+- My Bookings, digital ticket / PNR preview, schedule, profile, and support sections
+- Live train tracking UI with route progress, map-provider placeholder, current station, ETA, speed, and delay status
+- Existing backend-compatible register, login, booking create/list/cancel flows
 
 Notes:
 - Passwords are stored as SHA-256 hashes (not plain text).

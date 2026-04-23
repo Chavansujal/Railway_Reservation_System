@@ -44,6 +44,8 @@ public class ApiServer {
         server.createContext("/api/register", new RegisterHandler());
         server.createContext("/api/login", new LoginHandler());
         server.createContext("/api/bookings", new BookingsHandler());
+        server.createContext("/api/cities", new CitiesHandler());
+        server.createContext("/api/trains", new TrainsHandler());
         server.createContext("/api/health", exchange -> {
             if (!"GET".equals(exchange.getRequestMethod())) {
                 sendJson(exchange, 405, "{\"error\":\"Method not allowed\"}");
@@ -284,6 +286,111 @@ public class ApiServer {
                 sendJson(exchange, 200, "{\"message\":\"Booking cancelled successfully\"}");
             } catch (SQLException ex) {
                 sendJson(exchange, 500, "{\"error\":\"Could not cancel booking\"}");
+            }
+        }
+    }
+
+    private static class CitiesHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"GET".equals(exchange.getRequestMethod())) {
+                sendJson(exchange, 405, "{\"error\":\"Method not allowed\"}");
+                return;
+            }
+
+            String sql = "SELECT city_name, state_name FROM cities ORDER BY city_name ASC";
+            try (Connection connection = getConnection(); PreparedStatement statement = connection.prepareStatement(sql); ResultSet resultSet = statement.executeQuery()) {
+                StringBuilder json = new StringBuilder();
+                json.append("{\"cities\":[");
+                boolean first = true;
+                while (resultSet.next()) {
+                    if (!first) {
+                        json.append(",");
+                    }
+                    first = false;
+
+                    json.append("{")
+                        .append("\"name\":\"").append(escapeJson(resultSet.getString("city_name"))).append("\",")
+                        .append("\"state\":\"").append(escapeJson(resultSet.getString("state_name"))).append("\"")
+                        .append("}");
+                }
+                json.append("]}");
+                sendJson(exchange, 200, json.toString());
+            } catch (SQLException ex) {
+                sendJson(exchange, 500, "{\"error\":\"Could not load cities\"}");
+            }
+        }
+    }
+
+    private static class TrainsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"GET".equals(exchange.getRequestMethod())) {
+                sendJson(exchange, 405, "{\"error\":\"Method not allowed\"}");
+                return;
+            }
+
+            Map<String, String> query = parseQuery(exchange.getRequestURI().getRawQuery());
+            String from = safe(query.get("from"));
+            String to = safe(query.get("to"));
+
+            String sql =
+                "SELECT t.id, t.train_number, t.train_name, " +
+                "sc.city_name AS source_city, dc.city_name AS destination_city, " +
+                "TIME_FORMAT(t.departure_time, '%H:%i') AS depart, " +
+                "TIME_FORMAT(t.arrival_time, '%H:%i') AS arrive, " +
+                "TIMESTAMPDIFF(MINUTE, " +
+                "  CONCAT('2000-01-01 ', t.departure_time), " +
+                "  DATE_ADD(CONCAT('2000-01-01 ', t.arrival_time), INTERVAL (t.arrival_time < t.departure_time) DAY)" +
+                ") AS duration_minutes, " +
+                "t.available_seats, r.distance_km " +
+                "FROM trains t " +
+                "JOIN routes r ON t.route_id = r.id " +
+                "JOIN cities sc ON r.source_city_id = sc.id " +
+                "JOIN cities dc ON r.destination_city_id = dc.id " +
+                "WHERE (? = '' OR sc.city_name = ?) " +
+                "AND (? = '' OR dc.city_name = ?) " +
+                "ORDER BY t.departure_time ASC";
+
+            try (Connection connection = getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, from);
+                statement.setString(2, from);
+                statement.setString(3, to);
+                statement.setString(4, to);
+
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    StringBuilder json = new StringBuilder();
+                    json.append("{\"trains\":[");
+                    boolean first = true;
+                    while (resultSet.next()) {
+                        if (!first) {
+                            json.append(",");
+                        }
+                        first = false;
+
+                        int distanceKm = resultSet.getInt("distance_km");
+                        int estimatedFare = Math.max(250, distanceKm * 2);
+                        int platform = (resultSet.getInt("id") % 7) + 1;
+
+                        json.append("{")
+                            .append("\"number\":\"").append(escapeJson(resultSet.getString("train_number"))).append("\",")
+                            .append("\"name\":\"").append(escapeJson(resultSet.getString("train_name"))).append("\",")
+                            .append("\"from\":\"").append(escapeJson(resultSet.getString("source_city"))).append("\",")
+                            .append("\"to\":\"").append(escapeJson(resultSet.getString("destination_city"))).append("\",")
+                            .append("\"depart\":\"").append(escapeJson(resultSet.getString("depart"))).append("\",")
+                            .append("\"arrive\":\"").append(escapeJson(resultSet.getString("arrive"))).append("\",")
+                            .append("\"duration\":").append(resultSet.getInt("duration_minutes")).append(",")
+                            .append("\"seats\":").append(resultSet.getInt("available_seats")).append(",")
+                            .append("\"fare\":").append(estimatedFare).append(",")
+                            .append("\"days\":\"Daily\",")
+                            .append("\"platform\":").append(platform)
+                            .append("}");
+                    }
+                    json.append("]}");
+                    sendJson(exchange, 200, json.toString());
+                }
+            } catch (SQLException ex) {
+                sendJson(exchange, 500, "{\"error\":\"Could not load trains\"}");
             }
         }
     }

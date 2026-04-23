@@ -1,7 +1,6 @@
 const SESSION_KEY = "railnova_user";
 const THEME_KEY = "railnova_theme";
 
-const stations = ["New Delhi", "Mumbai Central", "Chennai Central", "Howrah Junction", "Bengaluru City", "Pune Junction", "Jaipur Junction", "Ahmedabad Junction", "Hyderabad Deccan", "Kolkata"];
 const sampleTrains = [
   { name: "Rajdhani Express", number: "12952", from: "New Delhi", to: "Mumbai Central", depart: "16:55", arrive: "08:35", duration: 940, seats: 42, fare: 1840, days: "Mon, Tue, Thu, Sat", platform: 4 },
   { name: "Duronto Superfast", number: "12264", from: "New Delhi", to: "Mumbai Central", depart: "11:25", arrive: "04:10", duration: 1005, seats: 18, fare: 1620, days: "Daily", platform: 2 },
@@ -26,7 +25,9 @@ const state = {
   user: loadUser(),
   bookings: [],
   selectedTrain: sampleTrains[0],
-  selectedBooking: null
+  selectedBooking: null,
+  cities: [],
+  trainResults: [...sampleTrains]
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -173,6 +174,40 @@ async function cancelBooking(bookingId) {
   if (!res.ok) throw new Error(payload.error || "Could not cancel booking");
 }
 
+async function fetchCities() {
+  const res = await fetch("/api/cities");
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(payload.error || "Could not load cities");
+  state.cities = payload.cities || [];
+  return state.cities;
+}
+
+async function fetchTrains(fromCity, toCity) {
+  const params = new URLSearchParams();
+  if (fromCity) params.set("from", fromCity);
+  if (toCity) params.set("to", toCity);
+
+  const res = await fetch(`/api/trains?${params.toString()}`);
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(payload.error || "Could not load trains");
+  return payload.trains || [];
+}
+
+function populateCitySelects() {
+  const cityOptions = state.cities.map((city) => `<option value="${city.name}">${city.name}</option>`).join("");
+
+  $$("select[data-city-select]").forEach((select) => {
+    const firstOption = select.querySelector("option[value='']");
+    const firstOptionMarkup = firstOption ? firstOption.outerHTML : '<option value="">Select city</option>';
+    const previousValue = select.value;
+
+    select.innerHTML = `${firstOptionMarkup}${cityOptions}`;
+    if (previousValue && state.cities.some((city) => city.name === previousValue)) {
+      select.value = previousValue;
+    }
+  });
+}
+
 function renderPopularRoutes() {
   $("#popularRoutes").innerHTML = routes.map(([from, to, fare, time]) => `
     <article class="route-card">
@@ -189,13 +224,18 @@ function formatDuration(minutes) {
   return `${h}h ${String(m).padStart(2, "0")}m`;
 }
 
-function renderTrainResults(items = sampleTrains) {
+function renderTrainResults(items = state.trainResults) {
   const container = $("#trainResults");
+  if (!items.length) {
+    container.innerHTML = `<div class="empty">No trains found for the selected source and destination.</div>`;
+    return;
+  }
+
   container.innerHTML = items.map((train) => `
     <article class="train-result">
       <div>
         <h3>${train.name}</h3>
-        <p>#${train.number} · ${train.days}</p>
+        <p>#${train.number} - ${train.days || "Daily"}</p>
         <div class="result-meta">
           <span>${train.seats} seats</span>
           <span>Platform ${train.platform}</span>
@@ -204,10 +244,10 @@ function renderTrainResults(items = sampleTrains) {
       </div>
       <div>
         <div class="train-times"><strong>${train.depart}</strong><span></span><strong>${train.arrive}</strong></div>
-        <p>${train.from} to ${train.to} · ${formatDuration(train.duration)}</p>
+        <p>${train.from} to ${train.to} - ${formatDuration(train.duration)}</p>
       </div>
       <div>
-        <h3>₹${train.fare}</h3>
+        <h3>Rs ${train.fare}</h3>
         <button class="btn btn-primary book-train-btn" data-train="${train.number}" type="button">Book Now</button>
       </div>
     </article>
@@ -216,7 +256,7 @@ function renderTrainResults(items = sampleTrains) {
 
 function sortedTrains() {
   const key = $("#sortSelect").value;
-  const copy = [...sampleTrains];
+  const copy = [...state.trainResults];
   if (key === "fare") return copy.sort((a, b) => a.fare - b.fare);
   if (key === "duration") return copy.sort((a, b) => a.duration - b.duration);
   if (key === "seats") return copy.sort((a, b) => b.seats - a.seats);
@@ -334,6 +374,22 @@ function setDefaultDates() {
   });
 }
 
+async function runTrainSearch({ from, to }) {
+  $("#resultSkeleton").classList.remove("hidden");
+  $("#trainResults").innerHTML = "";
+  try {
+    state.trainResults = await fetchTrains(from, to);
+    $("#resultSkeleton").classList.add("hidden");
+    renderTrainResults(sortedTrains());
+    toast("Trains loaded for selected cities.", "success");
+  } catch (err) {
+    $("#resultSkeleton").classList.add("hidden");
+    state.trainResults = [];
+    renderTrainResults([]);
+    toast(err.message, "error");
+  }
+}
+
 function bindEvents() {
   window.addEventListener("load", () => setTimeout(() => loader.classList.add("done"), 650));
 
@@ -373,28 +429,30 @@ function bindEvents() {
     button.addEventListener("click", () => showAppSection(button.dataset.appSection));
   });
 
-  $("#homeSearchForm").addEventListener("submit", (event) => {
+  $("#homeSearchForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!state.user) {
       openAuth("login");
       toast("Login first, then your train search opens automatically.", "error");
       return;
     }
+
+    const formData = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const searchForm = $("#trainSearchForm");
+    searchForm.from.value = formData.from;
+    searchForm.to.value = formData.to;
+    if (formData.date) searchForm.date.value = formData.date;
+
     showAppSection("search");
-    renderTrainResults(sortedTrains());
+    await runTrainSearch({ from: formData.from, to: formData.to });
   });
 
   $("#voiceBtn").addEventListener("click", () => toast("Voice search UI is ready. Connect Web Speech API when needed.", "success"));
 
-  $("#trainSearchForm").addEventListener("submit", (event) => {
+  $("#trainSearchForm").addEventListener("submit", async (event) => {
     event.preventDefault();
-    $("#resultSkeleton").classList.remove("hidden");
-    $("#trainResults").innerHTML = "";
-    setTimeout(() => {
-      $("#resultSkeleton").classList.add("hidden");
-      renderTrainResults(sortedTrains());
-      toast("Trains loaded with smart filters and fare predictions.", "success");
-    }, 720);
+    const formData = Object.fromEntries(new FormData(event.currentTarget).entries());
+    await runTrainSearch({ from: formData.from, to: formData.to });
   });
 
   $("#sortSelect").addEventListener("change", () => renderTrainResults(sortedTrains()));
@@ -402,7 +460,7 @@ function bindEvents() {
   $("#trainResults").addEventListener("click", (event) => {
     const button = event.target.closest(".book-train-btn");
     if (!button) return;
-    state.selectedTrain = sampleTrains.find((train) => train.number === button.dataset.train) || sampleTrains[0];
+    state.selectedTrain = state.trainResults.find((train) => train.number === button.dataset.train) || state.trainResults[0] || sampleTrains[0];
     const form = $("#bookingForm");
     form.source.value = state.selectedTrain.from;
     form.destination.value = state.selectedTrain.to;
@@ -413,7 +471,8 @@ function bindEvents() {
   $("#bookingForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!state.user) return openAuth("login");
-    const formData = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const form = event.currentTarget;
+    const formData = Object.fromEntries(new FormData(form).entries());
     const apiData = {
       userId: state.user.id,
       source: formData.source,
@@ -423,7 +482,7 @@ function bindEvents() {
     };
     try {
       await postForm("/api/bookings", apiData);
-      event.currentTarget.reset();
+      form.reset();
       setDefaultDates();
       await loadBookings();
       openSuccess("Booking confirmed", "Your ticket was booked successfully and is available in My Bookings.");
@@ -460,10 +519,11 @@ function bindEvents() {
 
   $("#registerForm").addEventListener("submit", async (event) => {
     event.preventDefault();
-    const formData = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const form = event.currentTarget;
+    const formData = Object.fromEntries(new FormData(form).entries());
     try {
       await postForm("/api/register", formData);
-      event.currentTarget.reset();
+      form.reset();
       switchAuth("login");
       toast("Registration successful. Please login to continue.", "success");
     } catch (err) {
@@ -473,7 +533,8 @@ function bindEvents() {
 
   $("#loginForm").addEventListener("submit", async (event) => {
     event.preventDefault();
-    const formData = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const form = event.currentTarget;
+    const formData = Object.fromEntries(new FormData(form).entries());
     try {
       const data = await postForm("/api/login", formData);
       saveUser(data.user);
@@ -524,7 +585,6 @@ async function init() {
   if (localStorage.getItem(THEME_KEY) === "light") document.body.classList.add("light");
   bindEvents();
   renderPopularRoutes();
-  renderTrainResults();
   renderSeatMap();
   renderTrackingTimeline();
   renderSchedule();
@@ -532,6 +592,30 @@ async function init() {
   initReveal();
   updateDashboard();
   renderBookings();
+
+  try {
+    await fetchCities();
+    populateCitySelects();
+
+    const searchForm = $("#trainSearchForm");
+    if (state.cities.length >= 2) {
+      if (!searchForm.from.value) searchForm.from.value = state.cities[0].name;
+      if (!searchForm.to.value) searchForm.to.value = state.cities[1].name;
+    }
+
+    const initialFrom = searchForm.from.value;
+    const initialTo = searchForm.to.value;
+    if (initialFrom && initialTo) {
+      state.trainResults = await fetchTrains(initialFrom, initialTo);
+      renderTrainResults(sortedTrains());
+    } else {
+      renderTrainResults([]);
+    }
+  } catch (err) {
+    state.trainResults = [...sampleTrains];
+    renderTrainResults(sortedTrains());
+    toast(`Live city list unavailable: ${err.message}`, "error");
+  }
 
   if (state.user) {
     try {
@@ -545,3 +629,4 @@ async function init() {
 }
 
 init();
+

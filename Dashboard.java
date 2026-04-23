@@ -1,18 +1,26 @@
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import java.awt.BorderLayout;
+import java.awt.Font;
+import java.awt.GridLayout;
 
 public class Dashboard extends JFrame {
 
-    int userId;   // store logged-in user id
-    JButton bookBtn, viewBtn, logoutBtn;
+    private final int userId;
+    private JButton bookBtn;
+    private JButton viewBtn;
+    private JButton feedbackBtn;
+    private JButton logoutBtn;
 
     public Dashboard(int userId) {
 
-        this.userId = userId;   // save user id
+        this.userId = userId;
 
         setTitle("Dashboard");
-        setSize(500, 400);
+        setSize(500, 430);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -21,38 +29,26 @@ public class Dashboard extends JFrame {
 
         bookBtn = new JButton("Book Ticket");
         viewBtn = new JButton("View Bookings");
+        feedbackBtn = new JButton("Give Feedback");
         logoutBtn = new JButton("Logout");
 
-        JPanel btnPanel = new JPanel(new GridLayout(3,1,20,20));
+        JPanel btnPanel = new JPanel(new GridLayout(4, 1, 20, 20));
         btnPanel.setBorder(BorderFactory.createEmptyBorder(50, 100, 50, 100));
 
         btnPanel.add(bookBtn);
         btnPanel.add(viewBtn);
+        btnPanel.add(feedbackBtn);
         btnPanel.add(logoutBtn);
 
         add(welcome, BorderLayout.NORTH);
         add(btnPanel, BorderLayout.CENTER);
 
-        // 🔥 Book Ticket Button
-        bookBtn.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                new BookTicket(userId);
-            }
-        });
-
-        // 🔥 View Bookings Button
-        viewBtn.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                new ViewBookings(userId);
-            }
-        });
-
-        // 🔥 Logout Button
-        logoutBtn.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                new Login();
-                dispose();
-            }
+        bookBtn.addActionListener(e -> new BookTicket(this.userId));
+        viewBtn.addActionListener(e -> new ViewBookings(this.userId));
+        feedbackBtn.addActionListener(e -> new FeedbackForm(this.userId));
+        logoutBtn.addActionListener(e -> {
+            new Login();
+            dispose();
         });
 
         setVisible(true);

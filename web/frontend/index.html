@@ -90,8 +90,16 @@
           <h2>Find your next train</h2>
         </div>
         <form id="homeSearchForm" class="journey-form">
-          <label>From station<input list="stationList" name="from" placeholder="New Delhi" required></label>
-          <label>To station<input list="stationList" name="to" placeholder="Mumbai Central" required></label>
+          <label>From station
+            <select name="from" data-city-select required>
+              <option value="">Select source city</option>
+            </select>
+          </label>
+          <label>To station
+            <select name="to" data-city-select required>
+              <option value="">Select destination city</option>
+            </select>
+          </label>
           <label>Date<input name="date" type="date" required></label>
           <label>Class
             <select name="class">
@@ -237,8 +245,16 @@
             </select>
           </div>
           <form id="trainSearchForm" class="journey-form large">
-            <label>From<input list="stationList" name="from" value="New Delhi" required></label>
-            <label>To<input list="stationList" name="to" value="Mumbai Central" required></label>
+            <label>From
+              <select id="searchFromSelect" name="from" data-city-select required>
+                <option value="">Select source city</option>
+              </select>
+            </label>
+            <label>To
+              <select id="searchToSelect" name="to" data-city-select required>
+                <option value="">Select destination city</option>
+              </select>
+            </label>
             <label>Date<input name="date" type="date" required></label>
             <label>Class<select name="class"><option>AC 2 Tier</option><option>AC 3 Tier</option><option>Sleeper</option><option>Executive Chair Car</option></select></label>
             <label>Quota<select name="quota"><option>General</option><option>Tatkal</option><option>Ladies</option><option>Senior Citizen</option></select></label>
@@ -256,8 +272,16 @@
           <div class="booking-layout">
             <form id="bookingForm" class="glass-card booking-form">
               <h3>Journey details</h3>
-              <label>Source<input list="stationList" name="source" placeholder="New Delhi" required></label>
-              <label>Destination<input list="stationList" name="destination" placeholder="Mumbai Central" required></label>
+              <label>Source
+                <select name="source" data-city-select required>
+                  <option value="">Select source city</option>
+                </select>
+              </label>
+              <label>Destination
+                <select name="destination" data-city-select required>
+                  <option value="">Select destination city</option>
+                </select>
+              </label>
               <label>Journey date<input type="date" name="journeyDate" required></label>
               <label>Passengers<input type="number" name="seats" min="1" max="6" value="1" required></label>
               <label>Passenger name<input name="passengerName" placeholder="Passenger full name"></label>
@@ -433,19 +457,6 @@
       <button id="successClose" class="btn btn-primary" type="button">Continue</button>
     </div>
   </div>
-
-  <datalist id="stationList">
-    <option value="New Delhi">
-    <option value="Mumbai Central">
-    <option value="Chennai Central">
-    <option value="Howrah Junction">
-    <option value="Bengaluru City">
-    <option value="Pune Junction">
-    <option value="Jaipur Junction">
-    <option value="Ahmedabad Junction">
-    <option value="Hyderabad Deccan">
-    <option value="Kolkata">
-  </datalist>
 
   <div id="toastStack" class="toast-stack" aria-live="polite"></div>
 

@@ -1,70 +1,75 @@
-import javax.swing.*;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 
 public class ViewBookings extends JFrame {
 
-    int userId;
-    JTable table;
-    DefaultTableModel model;
+    private final int userId;
+    private JTable table;
+    private DefaultTableModel model;
 
     public ViewBookings(int userId) {
 
         this.userId = userId;
 
         setTitle("Your Bookings");
-        setSize(600, 400);
+        setSize(850, 400);
         setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-        String[] columns = {"Booking ID", "Source", "Destination", "Date", "Seats"};
+        String[] columns = {"Booking ID", "Train Number", "Train Name", "Source", "Destination", "Date", "Seats"};
         model = new DefaultTableModel(columns, 0);
         table = new JTable(model);
 
-        JScrollPane scrollPane = new JScrollPane(table);
-        add(scrollPane);
+        add(new JScrollPane(table));
+        loadBookings();
 
-        try {
-            Connection con = DBConnection.getConnection();
+        setVisible(true);
+    }
+
+    private void loadBookings() {
+        String query =
+            "SELECT id, train_number, train_name, source, destination, journey_date, seats " +
+            "FROM bookings WHERE user_id = ? ORDER BY journey_date ASC";
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement pst = con.prepareStatement(query)) {
 
             if (con == null) {
                 JOptionPane.showMessageDialog(this, "Database not connected!");
                 return;
             }
 
-            String query = "SELECT id, source, destination, journey_date, seats FROM bookings WHERE user_id=?";
-            PreparedStatement pst = con.prepareStatement(query);
             pst.setInt(1, userId);
 
-            ResultSet rs = pst.executeQuery();
+            try (ResultSet rs = pst.executeQuery()) {
+                boolean hasData = false;
 
-            boolean hasData = false;
-
-            while (rs.next()) {
-                hasData = true;
-
-                model.addRow(new Object[]{
+                while (rs.next()) {
+                    hasData = true;
+                    model.addRow(new Object[]{
                         rs.getInt("id"),
+                        rs.getString("train_number"),
+                        rs.getString("train_name"),
                         rs.getString("source"),
                         rs.getString("destination"),
                         rs.getDate("journey_date"),
                         rs.getInt("seats")
-                });
+                    });
+                }
+
+                if (!hasData) {
+                    JOptionPane.showMessageDialog(this, "No bookings found!");
+                }
             }
-
-            if (!hasData) {
-                JOptionPane.showMessageDialog(this, "No bookings found!");
-            }
-
-            rs.close();
-            pst.close();
-            con.close();
-
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(this, "Error loading bookings!");
         }
-
-        setVisible(true);
     }
 }

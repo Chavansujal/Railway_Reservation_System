@@ -39,9 +39,6 @@ CREATE TABLE IF NOT EXISTS trains (
 CREATE TABLE IF NOT EXISTS bookings (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
-    train_id INT NULL,
-    train_number VARCHAR(20) NULL,
-    train_name VARCHAR(100) NULL,
     source VARCHAR(80) NOT NULL,
     destination VARCHAR(80) NOT NULL,
     journey_date DATE NOT NULL,
@@ -49,6 +46,10 @@ CREATE TABLE IF NOT EXISTS bookings (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_bookings_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS train_id INT NULL;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS train_number VARCHAR(20) NULL;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS train_name VARCHAR(100) NULL;
 
 CREATE TABLE IF NOT EXISTS feedback (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -138,3 +139,4 @@ JOIN routes r ON r.source_city_id = (SELECT id FROM cities WHERE city_name = x.s
 UPDATE users
 SET password = password_hash
 WHERE (password IS NULL OR password = '') AND password_hash IS NOT NULL;
+

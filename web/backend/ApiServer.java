@@ -23,7 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ApiServer {
-    private static final int PORT = 8080;
+    private static final int PORT = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
     private static final Path FRONTEND_ROOT = Path.of("web", "frontend").toAbsolutePath().normalize();
 
     private static final String DB_URL = System.getenv().getOrDefault("RAILWAY_DB_URL", "jdbc:mysql://localhost:3306/railway");

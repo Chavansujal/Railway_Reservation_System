@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -26,9 +27,7 @@ public class ApiServer {
     private static final int PORT = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
     private static final Path FRONTEND_ROOT = Path.of("web", "frontend").toAbsolutePath().normalize();
 
-    private static final String DB_URL = System.getenv().getOrDefault("RAILWAY_DB_URL", "jdbc:mysql://localhost:3306/railway");
-    private static final String DB_USER = System.getenv().getOrDefault("RAILWAY_DB_USER", "root");
-    private static final String DB_PASSWORD = System.getenv().getOrDefault("RAILWAY_DB_PASSWORD", "12345");
+    private static final DbConfig DB_CONFIG = loadDbConfig();
 
     public static void main(String[] args) throws IOException {
         try {
@@ -87,7 +86,86 @@ public class ApiServer {
     }
 
     private static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+        return DriverManager.getConnection(DB_CONFIG.url, DB_CONFIG.user, DB_CONFIG.password);
+    }
+
+    private static DbConfig loadDbConfig() {
+        String url = firstEnv("RAILWAY_DB_URL", "JDBC_DATABASE_URL");
+        String user = firstEnv("RAILWAY_DB_USER", "DB_USER", "MYSQLUSER", "MYSQL_USER");
+        String password = firstEnv("RAILWAY_DB_PASSWORD", "DB_PASSWORD", "MYSQLPASSWORD", "MYSQL_PASSWORD");
+
+        if (url.isBlank()) {
+            String mysqlUrl = firstEnv("MYSQL_URL", "DATABASE_URL");
+            if (mysqlUrl.startsWith("jdbc:")) {
+                url = mysqlUrl;
+            } else if (mysqlUrl.startsWith("mysql://")) {
+                DbConfig parsedConfig = parseMysqlUrl(mysqlUrl);
+                url = parsedConfig.url;
+                if (user.isBlank()) user = parsedConfig.user;
+                if (password.isBlank()) password = parsedConfig.password;
+            }
+        }
+
+        if (url.isBlank()) {
+            String host = firstEnv("DB_HOST", "MYSQLHOST", "MYSQL_HOST");
+            String port = firstEnv("DB_PORT", "MYSQLPORT", "MYSQL_PORT");
+            String database = firstEnv("DB_NAME", "MYSQLDATABASE", "MYSQL_DATABASE");
+
+            if (host.isBlank()) host = "localhost";
+            if (port.isBlank()) port = "3306";
+            if (database.isBlank()) database = "railway";
+
+            url = "jdbc:mysql://" + host + ":" + port + "/" + database;
+        }
+
+        if (user.isBlank()) user = "root";
+        if (password.isBlank()) password = "12345";
+
+        return new DbConfig(url, user, password);
+    }
+
+    private static DbConfig parseMysqlUrl(String mysqlUrl) {
+        try {
+            URI uri = URI.create(mysqlUrl);
+            String host = uri.getHost();
+            int port = uri.getPort() > 0 ? uri.getPort() : 3306;
+            String database = uri.getPath() == null ? "railway" : uri.getPath().replaceFirst("^/", "");
+            String user = "";
+            String password = "";
+
+            String userInfo = uri.getUserInfo();
+            if (userInfo != null) {
+                String[] parts = userInfo.split(":", 2);
+                user = decode(parts[0]);
+                if (parts.length > 1) password = decode(parts[1]);
+            }
+
+            return new DbConfig("jdbc:mysql://" + host + ":" + port + "/" + database, user, password);
+        } catch (Exception ex) {
+            return new DbConfig("", "", "");
+        }
+    }
+
+    private static String firstEnv(String... names) {
+        for (String name : names) {
+            String value = System.getenv(name);
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        return "";
+    }
+
+    private static class DbConfig {
+        private final String url;
+        private final String user;
+        private final String password;
+
+        private DbConfig(String url, String user, String password) {
+            this.url = url;
+            this.user = user;
+            this.password = password;
+        }
     }
 
     private static class RegisterHandler implements HttpHandler {
